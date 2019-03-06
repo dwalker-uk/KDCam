@@ -1,0 +1,67 @@
+{
+  "masks": [
+      {
+        "label": "datetime",
+        "type":  "contour",
+        "value": [[4, 549], [4, 565], [250, 565], [250, 549]]
+      },
+      {
+        "label": "temp_mask",
+        "type":  "image",
+        "value": "/Users/david/Documents/Development/Python/KDCam/media/temp_mask.png"
+      }
+  ],
+  "trigger_zones": [
+    {
+      "label": "front_door",
+      "type":  "contour",
+      "value": [[0, 200], [0, 525], [600, 350], [400, 150]]
+    }
+  ],
+  "folders": {
+      "video_pending": "/Users/username/camera/media/",
+      "video_done":    "/Users/username/camera/media/doneVids/",
+      "video_error":   "/Users/username/camera/media/errorVids/",
+      "images_output": "/Users/username/camera/media/imgOutput/",
+      "images_debug":  "/Users/username/camera/media/imgDebug/"
+  },
+  "files": {
+      "clip_data":     "/Users/username/camera/media/clip_data.json",
+      "activity_log":  "/Users/username/camera/media/activity_log.json",
+      "daily_stats":   "/Users/username/camera/media/daily_stats.json",
+      "log":           "/Users/username/camera/media/log.json",
+      "log2":          "/Users/username/camera/media/log_test.json",
+      "log3":          "/Users/username/camera/media/log_dict.json"
+  },
+  "disk_space": {
+      "check_interval_secs": 300,
+      "min_remaining_gb": 4,
+      "critical_remaining_gb": 1,
+      "min_gb_to_remove": 0.005,
+      "target_ratios": {
+          "video_done": 1000,
+          "images_output": 20,
+          "images_debug": 5
+      }
+  },
+  "outputs": {
+      "composite_styles": ["Primary"]
+  },
+  "processing": {
+      "max_mem_usage_mb": 1000
+  },
+  "debug": {
+    "run_once": false,
+    "always_cleanup": true,
+    "skip_videos": false,
+    "max_videos": -1,
+    "move_complete_videos": false,
+    "report_memory": true,
+    "composite_styles": ["Complete", "Fallback"],
+    "save_annotated": true,
+    "save_subject_crops": true,
+    "save_frames_all": false,
+    "save_frames_with_subjects": true,
+    "save_frames_active": false
+  }
+}
