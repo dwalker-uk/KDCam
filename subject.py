@@ -26,6 +26,9 @@ class Subject:
     _is_setup_dimensions_numpy = False
     _dimensions_numpy = None
 
+    # findContours returns (image, contours, hierarchy) in OpenCV 3, but (contours, hierarchy) in OpenCV 2 and OpenCV 4
+    _contours_return_index = 1 if cv2.__version__.startswith('3.') else 0
+
     #
     # ##### SETUP METHODS #####
     #
@@ -208,7 +211,7 @@ class Subject:
                                         numpy.ones((Subject._dilate_pixels, Subject._dilate_pixels), numpy.uint8))
         contour_dilate = cv2.findContours(subject_mask,
                                           cv2.RETR_EXTERNAL,
-                                          cv2.CHAIN_APPROX_SIMPLE)[1]
+                                          cv2.CHAIN_APPROX_SIMPLE)[self._contours_return_index]
         # As we start with only one contour, and are dilating it, we're guaranteed to still only have one - hence [0]
         return contour_dilate[0]
 

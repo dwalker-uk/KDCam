@@ -25,6 +25,9 @@ class Clip:
     _annotate_line_colour = None
     _required_for = []
 
+    # findContours returns (image, contours, hierarchy) in OpenCV 3, but (contours, hierarchy) in OpenCV 2 and OpenCV 4
+    _contours_return_index = 1 if cv2.__version__.startswith('3.') else 0
+
     #
     # ##### SETUP METHODS
     #
@@ -441,7 +444,9 @@ class Clip:
         #  called once or twice per clip so has negligible impact.
         image_mask = cv2.resize(cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE), self.base_frame.dimensions.large,
                                 interpolation=cv2.INTER_NEAREST)
-        contours = cv2.findContours(numpy.invert(image_mask), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+        contours = cv2.findContours(numpy.invert(image_mask),
+                                    cv2.RETR_TREE,
+                                    cv2.CHAIN_APPROX_SIMPLE)[self._contours_return_index]
         cv2.drawContours(self._retain_mask, contours, -1, (0, 0, 0), cv2.FILLED)
         # Add these contours to the record of contours added to the mask - as it is already a list, concatenate then
         self.retain_mask_contours += contours

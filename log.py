@@ -154,7 +154,11 @@ class Log:
             than the entry, and will still match - so a valid_values item of 'ABC1' will mean a log entry of 'ABC'
             is considered valid, providing the entire length of the log entry is found somewhere within valid_values.
             :param name: Name of the log
-            :param valid_values: List of strings determining what is valid to remain in the log file.
+            :param valid_values: Set/List of strings determining what is valid to remain in the log file.
+                                 If valid_values is a Set, an exact match will be tested.
+                                 If valid_values is a List, the test will be up to the length of the comparison string.
+                                 Note that cleanup_log must only be called once, with a single list/set - otherwise
+                                 it is likely to delete everything (because it will fail to match each in turn)!
             :param search_key: Optional, used only for dict log types to index the search field.
             :param wait_for_deleted_entries: Optional bool, will wait for and return a list of removed values if True.
             :return: Returns an array listing the deleted entries, or empty list if not waited for.
@@ -602,15 +606,23 @@ class LogThread(AppThread):
                                         log_data.remove(log_entry)
                                         deleted_entries.append(log_entry)
                                 elif pending_filter['search_key']:
-                                    for valid_value in pending_filter['valid_values']:
-                                        # Test for a matching value *up to the length of the log entry* - extra chars
-                                        # at the end of valid_value will be ignored in the match
-                                        if (log_entry[pending_filter['search_key']][:len(valid_value)] ==
-                                                valid_value[:len(log_entry[pending_filter['search_key']])]):
-                                            break  # Valid entry - keep it
+                                    if isinstance(pending_filter['valid_values'], set):
+                                        # Test for exact match only, of the full string - much faster than "up to" below
+                                        if log_entry[pending_filter['search_key']] in pending_filter['valid_values']:
+                                            break
+                                        else:
+                                            log_data.remove(log_entry)
+                                            deleted_entries.append(log_entry[pending_filter['search_key']])
                                     else:
-                                        log_data.remove(log_entry)
-                                        deleted_entries.append(log_entry[pending_filter['search_key']])
+                                        for valid_value in pending_filter['valid_values']:
+                                            # Test for a matching value *up to the length of the log entry* - extra
+                                            # chars at the end of valid_value will be ignored in the match
+                                            if (log_entry[pending_filter['search_key']][:len(valid_value)] ==
+                                                    valid_value[:len(log_entry[pending_filter['search_key']])]):
+                                                break  # Valid entry - keep it
+                                        else:
+                                            log_data.remove(log_entry)
+                                            deleted_entries.append(log_entry[pending_filter['search_key']])
                                 else:
                                     raise Exception('Invalid request to filter values in the log')
 

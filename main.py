@@ -10,6 +10,7 @@ from settings import Settings
 from app_thread import AppThread
 import plugins
 import traceback
+import os
 
 
 #
@@ -20,7 +21,7 @@ helper.setup(annotate_line_colour=(0, 255, 255),
              lock_file='safe_start.lock')
 Clip.setup(time_increment=1000,
            annotate_line_colour=(0, 255, 255))
-settings = Settings('settings_%s.json' % helper.hostname())
+settings = Settings(os.path.join(os.path.dirname(__file__), 'settings_%s.json' % helper.hostname()))
 main_threads = {}
 main_abort = False
 
@@ -172,7 +173,7 @@ def process_video(video_filename):
                     return False
 
             if any_running_threads:
-                if helper.secs_elapsed_since_last(120, 'process_video_watchdog'):
+                if helper.secs_elapsed_since_last(180, 'process_video_watchdog'):
                     Log.add_entry('activity_log', 'Still processing in: %s' % running_threads)
                 if helper.secs_elapsed_since_last(720, 'process_video_watchdog_timeout'):
                     Log.add_entry('activity_log', 'Still processing after 12mins in: %s - stopping!' % running_threads)
@@ -467,7 +468,6 @@ class Cleanup(AppThread):
 
             space_low, free_space = file_handling.is_disk_space_low(settings.get['folders']['video_done'],
                                                                     settings.get['disk_space']['min_remaining_gb'])
-
             if (helper.secs_elapsed_since_last(secs=settings.get['disk_space']['check_interval_secs'],
                                                timer_id='diskspace')
                     or free_space < settings.get['disk_space']['critical_remaining_gb']
@@ -486,20 +486,25 @@ class Cleanup(AppThread):
                     library.get_file_ages()
                     Log.add_entry('activity_log', '  Modifying File Ages...')
                     library.modify_ages(Log.get_entire_log('clip_data'))
+
                     Log.add_entry('activity_log', '  Removing Files...')
                     library.do_cleanup(min_gb_to_remove=settings.get['disk_space']['min_gb_to_remove'],
                                        min_remaining_gb=settings.get['disk_space']['min_remaining_gb'],
                                        gb_free_space=free_space)
-                    Log.add_entry('activity_log', '  Cleaning Up Log Entries...')
-                    deleted_log_entries = Log.cleanup_log('clip_data', library.basenames(), 'basename')
-
                     for file in library.deleted_files:
                         Log.add_entry('activity_log',
                                       '  Deleted file (%s): %s' % (library.cleanup_folder, file['basename']))
                     for folder in library.deleted_folders:
                         Log.add_entry('activity_log', '  Deleted folder (%s): %s' % (library.cleanup_folder, folder))
+
+                    Log.add_entry('activity_log', '  Cleaning Up Log Entries...')
+                    basenames_set, basenames_list = library.basenames_setlist()
+                    # Note that by using basenames_set, we will always delete anything from Log that doesn't match
+                    # the standard filename format!  But could expand regex in Library to return more valid basenames...
+                    deleted_log_entries = Log.cleanup_log('clip_data', basenames_set, 'basename')
                     for entry in deleted_log_entries:
                         Log.add_entry('activity_log', '  Deleted log entry: %s' % entry)
+
                     Log.add_entry('activity_log', '  Cleanup Complete!')
 
                 Log.cleanup_log_by_date('activity_log', num_days_to_keep=7)
@@ -574,7 +579,7 @@ def main():
     main_threads['1_log'] = LogThread()
     Log.add_entry('activity_log', '*** Started KDCam Application! ***')
     main_threads['2_cleanup'] = Cleanup(wait_for_critical=True)
-    main_threads['3_sys_status'] = SysStatus(every_x_secs=600)
+    main_threads['3_sys_status'] = SysStatus(every_x_secs=1800)
     if not settings.get['debug']['skip_videos']:
         main_threads['4_video_processing'] = VideoProcessing(max_videos=settings.get['debug']['max_videos'])
 
@@ -606,7 +611,7 @@ def main():
                 return False
 
         if any_running_threads:
-            if helper.secs_elapsed_since_last(600, 'main_watchdog'):
+            if helper.secs_elapsed_since_last(3600, 'main_watchdog'):
                 Log.add_entry('activity_log', 'Active threads: %s' % running_threads)
         else:
             break

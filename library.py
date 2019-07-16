@@ -3,6 +3,7 @@ import errno
 from datetime import datetime
 import file_handling
 from log import Log
+import re
 
 
 class Library:
@@ -147,3 +148,17 @@ class Library:
             for file in self.library[folder]:
                 basenames.append(file['basename'])
         return basenames
+
+    def basenames_setlist(self):
+        basenames_set = set()
+        basenames_list = []
+        for folder in self.library.keys():
+            for file in self.library[folder]:
+                pattern = r'^KDCam-\d{8}-\d{4}-\d{5}'
+                true_basename = re.match(pattern, file['basename'])
+                if true_basename:
+                    basenames_set.add(true_basename.group())
+                else:
+                    basenames_list.append(file['basename'])
+        return basenames_set, basenames_list
+

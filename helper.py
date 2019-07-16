@@ -71,10 +71,12 @@ def stop_safe_lock_async():
 
 
 def _update_safe_lock_async(interval_secs):
+    first_run = True
     while _run_lock_async:
-        if secs_elapsed_since_last(secs=interval_secs, timer_id='lock_async'):
+        if first_run or secs_elapsed_since_last(secs=interval_secs, timer_id='lock_async'):
             with open(_lock_file, 'w') as f:
                 print('%s' % timestamp(), file=f)
+            first_run = False
         else:
             sleep(1)
 

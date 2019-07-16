@@ -31,6 +31,9 @@ class Frame:
     _is_setup_time_increment = False
     _time_increment = None
 
+    # findContours returns (image, contours, hierarchy) in OpenCV 3, but (contours, hierarchy) in OpenCV 2 and OpenCV 4
+    _contours_return_index = 1 if cv2.__version__.startswith('3.') else 0
+
     #
     # ##### SETUP METHODS
     #
@@ -287,7 +290,7 @@ class Frame:
         # Generate contours from the comparison image (numpy array), so we can work on each contour in turn
         morph_contours = cv2.findContours(self.audit['base_comparison_morph'],
                                           cv2.RETR_EXTERNAL,
-                                          cv2.CHAIN_APPROX_SIMPLE)[1]
+                                          cv2.CHAIN_APPROX_SIMPLE)[self._contours_return_index]
         for morph_contour in morph_contours:
             # Re-create the contour as an image mask, but only one contour at a time - then apply _retain_mask
             morph_contour_img = numpy.zeros(Frame.dimensions_numpy.large, numpy.uint8)
@@ -297,7 +300,7 @@ class Frame:
             # Once again revert back to contours, so we can loop through in turn and check their sizes (after masking)
             masked_morph_contours = cv2.findContours(masked_morph_contour_img,
                                                      cv2.RETR_EXTERNAL,
-                                                     cv2.CHAIN_APPROX_SIMPLE)[1]
+                                                     cv2.CHAIN_APPROX_SIMPLE)[self._contours_return_index]
             for masked_morph_contour in masked_morph_contours:
                 masked_morph_area = cv2.contourArea(masked_morph_contour)
                 if masked_morph_area > Frame._subject_size_threshold:

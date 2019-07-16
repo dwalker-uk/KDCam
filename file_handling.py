@@ -128,7 +128,10 @@ def remove_with_basename(source_folder, basename):
 
 
 def is_disk_space_low(folder, min_gb_remaining):
-    # TODO: Will terminate the application without warning if 'folder' does not exist!
+    # shutil.disk_usage will raise an exception if folder doesn't exist - therefore use app folder if not found
+    if not os.path.isdir(folder):
+        folder = os.path.dirname(__file__)
+
     disk_free_space = shutil.disk_usage(folder).free
     if disk_free_space < min_gb_remaining * 1024 * 1024 * 1024:
         return True, disk_free_space / (1024 * 1024 * 1024)
