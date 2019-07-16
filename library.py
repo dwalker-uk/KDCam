@@ -2,7 +2,7 @@ import os
 import errno
 from datetime import datetime
 import file_handling
-from log import Log
+from kd_log import Log
 import re
 
 

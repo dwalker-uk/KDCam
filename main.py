@@ -1,13 +1,16 @@
 import sys
 import file_handling
 import helper
+import kd_lockfile
+import kd_timers
+import kd_diskmemory
 from clip import Clip
 from frame import Frame
 from subject import Subject
 from library import Library
-from log import Log, LogThread
+from kd_log import Log, LogThread
 from settings import Settings
-from app_thread import AppThread
+from kd_app_thread import AppThread
 import plugins
 import traceback
 import os
@@ -17,8 +20,8 @@ import os
 # ##### CLASS SETUP
 #
 helper.setup(annotate_line_colour=(0, 255, 255),
-             annotate_grid_colour=(102, 153, 153),
-             lock_file='safe_start.lock')
+             annotate_grid_colour=(102, 153, 153))
+kd_lockfile.setup(lock_file='safe_start.lock')
 Clip.setup(time_increment=1000,
            annotate_line_colour=(0, 255, 255))
 settings = Settings(os.path.join(os.path.dirname(__file__), 'settings_%s.json' % helper.hostname()))
@@ -58,12 +61,12 @@ def process_video_error(clip, error_msg, video_metadata, error_detail):
     else:
         video_path = video_metadata['source_fullpath']
 
-    helper.clear_timer('vid')
+    kd_timers.clear_timer('vid')
     Log.add_entry('clip_data',
                   {'basename': video_metadata['basename_new'],
                    'video': video_path,
                    'status': 'ERROR - %s' % error_msg,
-                   'timestamp': helper.timestamp()
+                   'timestamp': kd_timers.timestamp()
                    })
 
     if clip is not None:
@@ -75,18 +78,18 @@ def process_video_error(clip, error_msg, video_metadata, error_detail):
 
 def process_video(video_filename):
 
-    helper.start_timer('vid')
+    kd_timers.start_timer('vid')
 
     # Save details of the file for easier handling later
     video_metadata = file_handling.get_file_metadata(settings.get['folders']['video_pending'], video_filename)
 
     # If file has been recently modified, don't process yet (to ensure it's completely uploaded)
     if file_handling.is_recently_modified(video_metadata['source_fullpath']):
-        helper.clear_timer('vid')
+        kd_timers.clear_timer('vid')
         return False
 
     if Log.search_log('clip_data', video_metadata['basename_new'], search_key='basename', match_partial=False):
-        helper.clear_timer('vid')
+        kd_timers.clear_timer('vid')
         return False
 
     Log.add_entry('activity_log', 'Processing %s...' % video_metadata['basename_new'])
@@ -148,10 +151,10 @@ def process_video(video_filename):
         # END OF PRIMARY VIDEO PROCESSING CODE
         #
 
-        helper.clear_elapsed_timer('process_video_watchdog')
-        helper.clear_elapsed_timer('process_video_watchdog_timeout')
+        kd_timers.clear_elapsed_timer('process_video_watchdog')
+        kd_timers.clear_elapsed_timer('process_video_watchdog_timeout')
         while True:
-            helper.sleep(0.05)
+            kd_timers.sleep(0.05)
             any_running_threads = False
             running_threads = ''
 
@@ -173,9 +176,9 @@ def process_video(video_filename):
                     return False
 
             if any_running_threads:
-                if helper.secs_elapsed_since_last(180, 'process_video_watchdog'):
+                if kd_timers.secs_elapsed_since_last(180, 'process_video_watchdog'):
                     Log.add_entry('activity_log', 'Still processing in: %s' % running_threads)
-                if helper.secs_elapsed_since_last(720, 'process_video_watchdog_timeout'):
+                if kd_timers.secs_elapsed_since_last(720, 'process_video_watchdog_timeout'):
                     Log.add_entry('activity_log', 'Still processing after 12mins in: %s - stopping!' % running_threads)
                     process_video_error(None, 'Process Video Timeout', video_metadata, 'Timed out after 12mins!')
             else:
@@ -192,7 +195,7 @@ def process_video(video_filename):
         else:
             video_path = video_metadata['source_fullpath']
 
-        Log.add_entry('activity_log', 'Video Total Time: %s' % helper.end_timer('vid'))
+        Log.add_entry('activity_log', 'Video Total Time: %s' % kd_timers.end_timer('vid'))
 
         # Add details to log file
         log_segments = []
@@ -208,7 +211,7 @@ def process_video(video_filename):
                        'is_night': clip.is_night(),
                        'clip_length': '%ds' % clip.video_duration_secs,
                        'segments': log_segments,
-                       'timestamp': helper.timestamp()
+                       'timestamp': kd_timers.timestamp()
                        },
                       wait_until_added=True)
 
@@ -245,9 +248,9 @@ class VideoProcessing(AppThread):
                             Log.add_entry('activity_log', 'Max number of videos threshold reached - stopping!')
                         break
                 else:
-                    helper.sleep(secs=5)
+                    kd_timers.sleep(secs=5)
             else:
-                helper.sleep(secs=5)
+                kd_timers.sleep(secs=5)
 
 
 #
@@ -343,7 +346,7 @@ class OutputFrames(AppThread):
 
             # If there was no activity, pause slightly to allow other threads to catch up before trying again
             if not activity_in_loop:
-                helper.sleep(0.1)
+                kd_timers.sleep(0.1)
 
 
 class OutputSegments(AppThread):
@@ -424,7 +427,7 @@ class OutputSegments(AppThread):
 
             # If there was no activity, pause slightly to allow other threads to catch up before trying again
             if not activity_in_loop:
-                helper.sleep(0.1)  # WAS 0.1  *********
+                kd_timers.sleep(0.1)
 
 
 #
@@ -439,13 +442,13 @@ class SysStatus(AppThread):
                 return
 
             # Add memory usage to the log file every 10mins
-            if helper.secs_elapsed_since_last(secs=every_x_secs, timer_id='mem_usage') or first_run:
+            if kd_timers.secs_elapsed_since_last(secs=every_x_secs, timer_id='mem_usage') or first_run:
                 first_run = False
-                helper.clear_memory()
+                kd_diskmemory.clear_memory()
                 Log.add_entry('activity_log', 'Sys Mem Free: %dMB, KDCam Mem Usage: %dMB, Temp: %s' %
-                              (helper.memory_free(), helper.memory_usage(), helper.get_temp_str()))
+                              (kd_diskmemory.memory_free(), kd_diskmemory.memory_usage(), helper.get_temp_str()))
             else:
-                helper.sleep(secs=1)
+                kd_timers.sleep(secs=1)
 
 
 #
@@ -460,15 +463,15 @@ class Cleanup(AppThread):
             if self.should_abort():
                 return
 
-            space_critical, _ = file_handling.is_disk_space_low(settings.get['folders']['video_done'],
+            space_critical, _ = kd_diskmemory.is_disk_space_low(settings.get['folders']['video_done'],
                                                                 settings.get['disk_space']['critical_remaining_gb'])
             if space_critical:
                 # TODO: Remove something that's really quick to remove here!  Suggests major error, so data loss is ok!
                 pass
 
-            space_low, free_space = file_handling.is_disk_space_low(settings.get['folders']['video_done'],
+            space_low, free_space = kd_diskmemory.is_disk_space_low(settings.get['folders']['video_done'],
                                                                     settings.get['disk_space']['min_remaining_gb'])
-            if (helper.secs_elapsed_since_last(secs=settings.get['disk_space']['check_interval_secs'],
+            if (kd_timers.secs_elapsed_since_last(secs=settings.get['disk_space']['check_interval_secs'],
                                                timer_id='diskspace')
                     or free_space < settings.get['disk_space']['critical_remaining_gb']
                     or first_run):
@@ -509,7 +512,7 @@ class Cleanup(AppThread):
 
                 Log.cleanup_log_by_date('activity_log', num_days_to_keep=7)
             else:
-                helper.sleep(5)
+                kd_timers.sleep(5)
 
     def __init__(self, wait_for_critical, **kwargs):
         super().__init__(**kwargs)
@@ -521,13 +524,13 @@ class Cleanup(AppThread):
                 if self.should_abort():
                     return
 
-                space_critical, _ = file_handling.is_disk_space_low(settings.get['folders']['video_done'],
+                space_critical, _ = kd_diskmemory.is_disk_space_low(settings.get['folders']['video_done'],
                                                                     settings.get['disk_space']['critical_remaining_gb'])
                 if not space_critical:
                     break
                 else:
                     Log.add_entry('activity_log', 'Disk space critical on startup - waiting for cleanup...')
-                    helper.sleep(secs=120)
+                    kd_timers.sleep(secs=120)
 
 
 #
@@ -549,7 +552,7 @@ def main():
                              {'name': 'num_segments_all', 'source': 'clip_data',
                               'function': lambda log_data: sum([len(d.get('segments', [])) for d in log_data])},
                              {'name': 'total_clip_length', 'source': 'clip_data',
-                              'function': lambda log_data: helper.secs_to_hhmmss(
+                              'function': lambda log_data: kd_timers.secs_to_hhmmss(
                                   sum([int(d.get('clip_length', '0s')[:-1]) for d in log_data]))},
                              {'name': 'num_clips_day', 'source': 'clip_data',
                               'function': lambda log_data: len([d for d in log_data if not d.get('is_night')])},
@@ -571,7 +574,7 @@ def main():
                               'function': lambda log_data: len([d for d in log_data
                                                                 if d[29:] == '*** Started KDCam Application! ***'])},
                              {'name': 'total_processing_time', 'source': 'activity_log',
-                              'function': lambda log_data: helper.secs_to_hhmmss(sum([float(d[47:-1]) for d in log_data
+                              'function': lambda log_data: kd_timers.secs_to_hhmmss(sum([float(d[47:-1]) for d in log_data
                                                                                  if d[29:46] == 'Video Total Time:']))}
                          ])
 
@@ -588,11 +591,11 @@ def main():
         for thread_name in sorted(list(main_threads), reverse=True):
             main_threads[thread_name].stop(wait_until_stopped=True)
         print('Stopped all main threads!')
-        helper.remove_safe_lock()
+        kd_lockfile.remove_safe_lock()
 
     # Everything is running in threads... just have this as a placeholder for now to keep things running
     while True:
-        helper.sleep(5)
+        kd_timers.sleep(5)
         any_running_threads = False
         running_threads = ''
 
@@ -611,7 +614,7 @@ def main():
                 return False
 
         if any_running_threads:
-            if helper.secs_elapsed_since_last(3600, 'main_watchdog'):
+            if kd_timers.secs_elapsed_since_last(3600, 'main_watchdog'):
                 Log.add_entry('activity_log', 'Active threads: %s' % running_threads)
         else:
             break
@@ -640,11 +643,11 @@ if __name__ == "__main__":
 
     # Check if it is safe to start, i.e. only run if not already (or very recently) running
     if len(sys.argv) >= 2 and sys.argv[1] == 'safe_start':
-        if helper.check_safe_lock(150):
+        if kd_lockfile.check_safe_lock(150):
             print('Script already running - exiting!')
             exit()
 
-    helper.start_safe_lock_async(60)
+    kd_lockfile.start_safe_lock_async(60)
 
     # Handle ctrl+c / stop debug commands by safely stopping all threads
     try:
@@ -655,6 +658,6 @@ if __name__ == "__main__":
     finally:
         for thread_name in sorted(list(main_threads), reverse=True):
             main_threads[thread_name].stop(wait_until_stopped=True)
-        helper.remove_safe_lock()
+        kd_lockfile.remove_safe_lock()
         print('Safely Stopped the Application!')
         sys.exit()

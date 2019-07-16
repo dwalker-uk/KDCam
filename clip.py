@@ -1,9 +1,10 @@
 import cv2
 import numpy
 import random
-import helper
+import kd_diskmemory
+import kd_timers
 from frame import Frame
-from app_thread import AppThread
+from kd_app_thread import AppThread
 
 
 class Clip:
@@ -181,8 +182,8 @@ class Clip:
                 if self.should_abort():
                     return
 
-                if helper.memory_usage() > max_mem_usage_mb:
-                    helper.sleep(0.25)
+                if kd_diskmemory.memory_usage() > max_mem_usage_mb:
+                    kd_timers.sleep(0.25)
                     continue
 
                 if time not in clip.frames:
@@ -237,9 +238,9 @@ class Clip:
                     frame2_time = frame1_time + clip.time_increment
 
                     # If Python exceeds memory limit, finish segment early
-                    if helper.memory_usage() > max_mem_usage_mb:
+                    if kd_diskmemory.memory_usage() > max_mem_usage_mb:
                         mem_low = True
-                        print('  EXCESS MEMORY USAGE: %.1fMB' % helper.memory_usage())
+                        print('  EXCESS MEMORY USAGE: %.1fMB' % kd_diskmemory.memory_usage())
                         segment_end_time = frame1_time  # end_time is frame1, as we haven't processed frame2 yet
                         break
 
@@ -264,7 +265,7 @@ class Clip:
 
                     else:
                         # If frame not yet available, wait for a short time before trying again
-                        helper.sleep(0.05)
+                        kd_timers.sleep(0.05)
 
                 if self.should_abort():
                     return
@@ -289,7 +290,7 @@ class Clip:
                     segment_start_time = segment_end_time
 
                 if mem_low:
-                    helper.sleep(0.5)
+                    kd_timers.sleep(0.5)
 
             # If we make it to the end, means we have created all segments - errors will 'return' instead
             # print('End of Get Segments, len(clip.segments) = %d' % len(clip.segments))
@@ -358,7 +359,7 @@ class Clip:
                     if clip.created_all_segments:
                         # clip.remove_redundant_frames_before(max(list(clip.frames)) + 1, 'COMPOSITE')
                         break
-                    helper.sleep(secs=0.05)
+                    kd_timers.sleep(secs=0.05)
 
 
     #

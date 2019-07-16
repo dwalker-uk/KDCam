@@ -1,5 +1,5 @@
-from app_thread import AppThread
-import helper
+from kd_app_thread import AppThread
+import kd_timers
 
 
 class TriggerZones(AppThread):
@@ -32,6 +32,6 @@ class TriggerZones(AppThread):
             else:
                 if clip.created_all_segments:
                     break
-                helper.sleep(secs=0.2)
+                kd_timers.sleep(secs=0.2)
 
 
