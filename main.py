@@ -21,7 +21,7 @@ import os
 #
 helper.setup(annotate_line_colour=(0, 255, 255),
              annotate_grid_colour=(102, 153, 153))
-kd_lockfile.setup(lock_file='safe_start.lock')
+kd_lockfile.setup(lock_file=os.path.join(os.path.dirname(__file__), 'safe_start.lock'))
 Clip.setup(time_increment=1000,
            annotate_line_colour=(0, 255, 255))
 settings = Settings(os.path.join(os.path.dirname(__file__), 'settings_%s.json' % helper.hostname()))
