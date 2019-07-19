@@ -1,6 +1,5 @@
 import os
 import glob
-import shutil
 import cv2
 import time
 from datetime import datetime
@@ -8,7 +7,16 @@ from datetime import datetime
 
 def get_pending_video_list(folder):
     """  """
-    return [f for f in sorted(os.listdir(folder)) if f.endswith('.mp4')]
+    video_list = []
+    this_list = [f for f in sorted(os.listdir(folder))]
+    for entry in this_list:
+        full_path = os.path.join(folder, entry)
+        if os.path.isdir(full_path):
+            video_list = video_list + get_pending_video_list(full_path)
+        elif entry.endswith('.mp4'):
+            video_list.append(full_path)
+    return video_list
+    # return [f for f in sorted(os.listdir(folder)) if f.endswith('.mp4')]
 
 
 def get_file_metadata(folder, video_filename):

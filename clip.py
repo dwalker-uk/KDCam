@@ -82,14 +82,16 @@ class Clip:
 
         # Load the video stream, and get the first frame - saved to both frames[base_frame_time] and base_frame, for
         #  more convenient accessibility
-        self._video_capture = cv2.VideoCapture(video_fullpath)
+        self._video_capture = cv2.VideoCapture(video_fullpath, cv2.CAP_FFMPEG)
         if not self._video_capture.isOpened():
             # Handle any error opening the video as EOF, as that is handled as all errors and will skip this clip.
+            print('DEBUG: NotOpened')
             raise EOFError
         self._frames_per_second = self._video_capture.get(cv2.CAP_PROP_FPS)
         self._frame_count = self._video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
 
         if self._frame_count == 0:
+            print('DEBUG: ZeroFrameCount')
             raise EOFError
 
         self.video_duration_secs = self._frame_count / self._frames_per_second
