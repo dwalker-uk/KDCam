@@ -12,9 +12,12 @@ def get_pending_video_list(folder):
     for entry in this_list:
         full_path = os.path.join(folder, entry)
         if os.path.isdir(full_path):
-            video_list = video_list + get_pending_video_list(full_path)
+            sub_list = get_pending_video_list(full_path)
+            for sub_entry in sub_list:
+                video_list.append(os.path.join(entry, sub_entry))
+            # video_list = video_list + get_pending_video_list(full_path)
         elif entry.endswith('.mp4'):
-            video_list.append(full_path)
+            video_list.append(entry)
     return video_list
     # return [f for f in sorted(os.listdir(folder)) if f.endswith('.mp4')]
 
