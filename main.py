@@ -57,7 +57,10 @@ def process_video_error(clip, error_msg, video_metadata, error_detail):
                                                 file_date='',
                                                 filename_new=video_metadata['filename_new'])
         file_handling.remove_with_basename(settings.get['folders']['video_pending'],
+                                           video_metadata['sub_folder'],
                                            video_metadata['basename_original'])
+        file_handling.remove_empty_folder(settings.get['folders']['video_pending'],
+                                          video_metadata['sub_folder'])
     else:
         video_path = video_metadata['source_fullpath']
 
@@ -191,7 +194,11 @@ def process_video(video_filename):
                                                     file_date=video_metadata['file_date'],
                                                     filename_new=video_metadata['filename_new'])
             file_handling.remove_with_basename(settings.get['folders']['video_pending'],
+                                               video_metadata['sub_folder'],
                                                video_metadata['basename_original'])
+            file_handling.remove_empty_folder(settings.get['folders']['video_pending'],
+                                              video_metadata['sub_folder'])
+
         else:
             video_path = video_metadata['source_fullpath']
 

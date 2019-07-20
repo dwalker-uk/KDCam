@@ -22,12 +22,14 @@ def get_pending_video_list(folder):
     # return [f for f in sorted(os.listdir(folder)) if f.endswith('.mp4')]
 
 
-def get_file_metadata(folder, video_filename):
+def get_file_metadata(folder, video_relative_path):
     """  """
     # SAMPLE FILENAME: XXCam_01_20180517203949574.mp4
     #                  XXXXX_XX_YYYYMMDDHHMMSSmmm.mp4
-    #                  XXCam-20180502-1727-34996.mp4
+    #                  2019/01/01/XXCam-20180502-1727-34996.mp4
     #                  XXCam-01-20180502-1727-34996.mp4
+    video_filename = os.path.basename(video_relative_path)
+    sub_folder = os.path.dirname(video_relative_path)
     basename, extension = os.path.splitext(video_filename)
     filename_parts_u = basename.split('_')
     filename_parts_d = basename.split('-')
@@ -51,7 +53,8 @@ def get_file_metadata(folder, video_filename):
         file_date = 'NO_DATE'
 
     return {'original': video_filename,
-            'source_fullpath': os.path.join(folder, video_filename),
+            'sub_folder': sub_folder,
+            'source_fullpath': os.path.join(folder, video_relative_path),
             'filename_new': '%s%s' % (basename_new, extension),
             'basename_new': basename_new,
             'basename_original': basename,
@@ -133,19 +136,19 @@ def move_to_done(video_done_folder, source_fullpath, file_date, filename_new):
     return video_path
 
 
-def remove_with_basename(source_folder, basename):
-    for matching_file in [f for f in sorted(os.listdir(source_folder)) if f.startswith(basename)]:
-        os.remove(os.path.join(source_folder, matching_file))
+def remove_with_basename(source_folder, sub_folder, basename):
+    for matching_file in [f for f in sorted(os.listdir(os.path.join(source_folder, sub_folder))) if f.startswith(basename)]:
+        os.remove(os.path.join(source_folder, sub_folder, matching_file))
 
 
-# def is_disk_space_low(folder, min_gb_remaining):
-#     # shutil.disk_usage will raise an exception if folder doesn't exist - therefore use app folder if not found
-#     if not os.path.isdir(folder):
-#         folder = os.path.dirname(__file__)
-#
-#     disk_free_space = shutil.disk_usage(folder).free
-#     if disk_free_space < min_gb_remaining * 1024 * 1024 * 1024:
-#         return True, disk_free_space / (1024 * 1024 * 1024)
-#     else:
-#         return False, disk_free_space / (1024 * 1024 * 1024)
+def remove_empty_folder(source_folder, sub_folder):
+    # Try to remove the sub-folder - will only succeed if it's empty, otherwise ignore the exception
+    try:
+        os.rmdir(os.path.join(source_folder, sub_folder))
+        # If this one was successful, and there's another folder above, then also try removing that
+        if os.path.dirname(sub_folder):
+            remove_empty_folder(source_folder, os.path.dirname(sub_folder))
+    except OSError:
+        pass
+
 
