@@ -1,6 +1,7 @@
 import cv2
 import numpy
 import random
+import subprocess
 import kd_diskmemory
 import kd_timers
 from frame import Frame
@@ -25,6 +26,8 @@ class Clip:
     _time_increment_default = False
     _annotate_line_colour = None
     _required_for = []
+    _mp4box_path = None
+    _video_fullpath_fixed = None
 
     # findContours returns (image, contours, hierarchy) in OpenCV 3, but (contours, hierarchy) in OpenCV 2 and OpenCV 4
     _contours_return_index = 1 if cv2.__version__.startswith('3.') else 0
@@ -33,7 +36,7 @@ class Clip:
     # ##### SETUP METHODS
     #
     @staticmethod
-    def setup(time_increment, annotate_line_colour):
+    def setup(time_increment, annotate_line_colour, mp4box_path=False, video_fullpath_fixed=None):
         """ Clip.setup() must be called prior to creating a Clip instance.
             Typically this would be at the top of the main file.  Clip.setup() in turn calls
             Frame.setup_time_increment to pass on that parameter - just to save passing multiple times elsewhere.
@@ -43,6 +46,8 @@ class Clip:
         Clip._is_setup = True
         Clip._time_increment_default = time_increment
         Clip._annotate_line_colour = annotate_line_colour
+        Clip._mp4box_path = mp4box_path
+        Clip._video_fullpath_fixed = video_fullpath_fixed
         # Pass on the time_increment, for neater code / to make it more readily available within multiple Frame methods
         Frame.setup_time_increment(time_increment)
 
@@ -82,11 +87,20 @@ class Clip:
 
         # Load the video stream, and get the first frame - saved to both frames[base_frame_time] and base_frame, for
         #  more convenient accessibility
-        self._video_capture = cv2.VideoCapture(video_fullpath, cv2.CAP_FFMPEG)
+        self._video_capture = cv2.VideoCapture(video_fullpath)
         if not self._video_capture.isOpened():
-            # Handle any error opening the video as EOF, as that is handled as all errors and will skip this clip.
-            print('DEBUG: NotOpened')
-            raise EOFError
+            # If video fails to open at the first try, and if mp4box is available, try re-saving the video to new file
+            #  then try VideoCapture again
+            if Clip._mp4box_path and Clip._video_fullpath_fixed:
+                subprocess.run([Clip._mp4box_path, '-add', video_fullpath, '-new', Clip._video_fullpath_fixed])
+                self._video_capture = cv2.VideoCapture(Clip._video_fullpath_fixed)
+                if not self._video_capture.isOpened():
+                    print('DEBUG: NotOpened After Fixed')
+                    raise EOFError
+            else:
+                # Handle any error opening the video as EOF, as that is handled as all errors and will skip this clip.
+                print('DEBUG: NotOpened')
+                raise EOFError
         self._frames_per_second = self._video_capture.get(cv2.CAP_PROP_FPS)
         self._frame_count = self._video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
 

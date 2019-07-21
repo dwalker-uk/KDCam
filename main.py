@@ -22,9 +22,12 @@ import os
 helper.setup(annotate_line_colour=(0, 255, 255),
              annotate_grid_colour=(102, 153, 153))
 kd_lockfile.setup(lock_file=os.path.join(os.path.dirname(__file__), 'safe_start.lock'))
-Clip.setup(time_increment=1000,
-           annotate_line_colour=(0, 255, 255))
 settings = Settings(os.path.join(os.path.dirname(__file__), 'settings_%s.json' % helper.hostname()))
+Clip.setup(time_increment=1000,
+           annotate_line_colour=(0, 255, 255),
+           mp4box_path=(settings.get['processing']['mp4box_path'] if settings.get['processing']['mp4box_path'] else None),
+           video_fullpath_fixed=settings.get['processing']['fixed_fullpath'])
+
 main_threads = {}
 main_abort = False
 
@@ -63,6 +66,9 @@ def process_video_error(clip, error_msg, video_metadata, error_detail):
                                           video_metadata['sub_folder'])
     else:
         video_path = video_metadata['source_fullpath']
+
+    # In all cases, remove any fixed versions of the video if they were created
+    file_handling.remove_fixed_video(settings.get['processing']['fixed_fullpath'])
 
     kd_timers.clear_timer('vid')
     Log.add_entry('clip_data',
@@ -198,9 +204,11 @@ def process_video(video_filename):
                                                video_metadata['basename_original'])
             file_handling.remove_empty_folder(settings.get['folders']['video_pending'],
                                               video_metadata['sub_folder'])
-
         else:
             video_path = video_metadata['source_fullpath']
+
+        # In all cases, remove any fixed versions of the video if they were created
+        file_handling.remove_fixed_video(settings.get['processing']['fixed_fullpath'])
 
         Log.add_entry('activity_log', 'Video Total Time: %s' % kd_timers.end_timer('vid'))
 

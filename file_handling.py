@@ -152,3 +152,7 @@ def remove_empty_folder(source_folder, sub_folder):
         pass
 
 
+def remove_fixed_video(video_fullpath_fixed):
+    if os.path.isfile(video_fullpath_fixed):
+        os.remove(video_fullpath_fixed)
+
