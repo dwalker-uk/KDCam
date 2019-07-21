@@ -38,6 +38,12 @@ def get_file_metadata(folder, video_relative_path):
         file_time1 = filename_parts_u[2][8:12]
         file_time2 = filename_parts_u[2][12:17]
         basename_new = '%s-%s-%s-%s' % (filename_parts_u[0], file_date, file_time1, file_time2)
+    elif len(filename_parts_u) == 3 and filename_parts_u[2].isdigit() and len(filename_parts_u[2]) == 14:
+        # July2019 firmware update on Reolink camera changed filename format, therefore simplify mine!
+        file_date = filename_parts_u[2][0:8]
+        file_time1 = filename_parts_u[2][8:14]
+        # file_time2 = filename_parts_u[2][12:14]
+        basename_new = '%s-%s-%s' % (filename_parts_u[0], file_date, file_time1)  # ,file_time2)
     elif (len(filename_parts_d) == 4 and filename_parts_d[1].isdigit() and len(filename_parts_d[1]) == 8
             and filename_parts_d[2].isdigit() and len(filename_parts_d[2]) == 4
             and filename_parts_d[3].isdigit() and len(filename_parts_d[3]) == 5):

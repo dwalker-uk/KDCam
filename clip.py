@@ -459,6 +459,8 @@ class Clip:
         #  calling bitwise_or with the new mask and the existing _retain_mask, but gives more control and makes the
         #  contours available for annotation.  This will be marginally less efficient that bitwise_or, but is only
         #  called once or twice per clip so has negligible impact.
+
+        # TODO: Need to check that mask_path is valid, i.e. the mask image exists!!
         image_mask = cv2.resize(cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE), self.base_frame.dimensions.large,
                                 interpolation=cv2.INTER_NEAREST)
         contours = cv2.findContours(numpy.invert(image_mask),
