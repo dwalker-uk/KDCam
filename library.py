@@ -70,6 +70,9 @@ class Library:
                 if not segments:
                     file['file_age'] = file['file_age'] * 2.5
 
+            except KeyError:
+                # If is_night or segments isn't found, leave the file age un-modified.
+                pass
             except ValueError:
                 # If the lookup value isn't found, leave the file age un-modified.
                 pass
