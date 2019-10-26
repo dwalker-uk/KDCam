@@ -59,6 +59,8 @@ class Library:
             By modifying the age, this function ensures images or clips with certain characteristics are retained for
             longer.  Characteristics we do not value as highly will be made artificially older.
             TODO: UPDATE THIS!
+            TODO: Ageing for night time seems off... deleted overnight videos from midnight to 5am at 1100 the same
+            TODO:  morning, whilst also deleting daytime videos from a month prior!  Must be wrong somewhere!
             :return: No return value
         """
         for file in self.library[self.cleanup_folder]:

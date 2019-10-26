@@ -21,7 +21,7 @@ import os
 #
 helper.setup(annotate_line_colour=(0, 255, 255),
              annotate_grid_colour=(102, 153, 153))
-kd_lockfile.setup(lock_file=os.path.join(os.path.dirname(__file__), 'safe_start.lock'))
+lock_file = os.path.join(os.path.dirname(__file__), 'safe_start.lock')
 settings = Settings(os.path.join(os.path.dirname(__file__), 'settings_%s.json' % helper.hostname()))
 Clip.setup(time_increment=1000,
            annotate_line_colour=(0, 255, 255),
@@ -555,6 +555,9 @@ def main():
     global main_threads
     #
 
+    # Start service to keep the lock_file continually updated
+    main_threads['0_LockFile'] = kd_lockfile.RunUpdateSafeLockAsync(lock_file=lock_file, interval_secs=60)
+
     # Generate Log in separate thread
     Log('clip_data', settings.get['files']['clip_data'], simple=False)
     Log('activity_log', settings.get['files']['activity_log'], simple=True, print_also=True)
@@ -606,7 +609,6 @@ def main():
         for thread_name in sorted(list(main_threads), reverse=True):
             main_threads[thread_name].stop(wait_until_stopped=True)
         print('Stopped all main threads!')
-        kd_lockfile.remove_safe_lock()
 
     # Everything is running in threads... just have this as a placeholder for now to keep things running
     while True:
@@ -626,7 +628,8 @@ def main():
                 Log.add_entry('activity_log', 'ERROR - %s' % traceback.format_exc())
                 Log.add_entry('activity_log', 'ERROR - Exception in %s: %s'
                               % (thread_name, repr(exc)))
-                return False
+                # return False
+                raise
 
         if any_running_threads:
             if kd_timers.secs_elapsed_since_last(3600, 'main_watchdog'):
@@ -658,11 +661,18 @@ if __name__ == "__main__":
 
     # Check if it is safe to start, i.e. only run if not already (or very recently) running
     if len(sys.argv) >= 2 and sys.argv[1] == 'safe_start':
-        if kd_lockfile.check_safe_lock(150):
+        if kd_lockfile.check_safe_lock(lock_file=lock_file, max_secs_for_safe_lock=150):
             print('Script already running - exiting!')
             exit()
 
-    kd_lockfile.start_safe_lock_async(60)
+    #
+    # # Check if it is safe to start, i.e. only run if not already (or very recently) running
+    # if len(sys.argv) >= 2 and sys.argv[1] == 'safe_start':
+    #     if kd_lockfile.check_safe_lock(150):
+    #         print('Script already running - exiting!')
+    #         exit()
+    #
+    # kd_lockfile.start_safe_lock_async(60)
 
     # Handle ctrl+c / stop debug commands by safely stopping all threads
     try:
@@ -671,8 +681,11 @@ if __name__ == "__main__":
         print('Request to Terminate the Application - Stopping Gracefully...')
         pass
     finally:
+        # if in_debug_mode:
+        #     print("Unexpected error:", sys.exc_info()[0])
+        #     raise
         for thread_name in sorted(list(main_threads), reverse=True):
+            print('Stopping ' + thread_name + '...')
             main_threads[thread_name].stop(wait_until_stopped=True)
-        kd_lockfile.remove_safe_lock()
         print('Safely Stopped the Application!')
         sys.exit()
